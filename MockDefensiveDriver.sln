@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockDefensiveDriver", "MockDefensiveDriver\MockDefensiveDriver\MockDefensiveDriver.csproj", "{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}"
+EndProject
+Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "MockDefensiveDriverContent", "MockDefensiveDriver\MockDefensiveDriverContent\MockDefensiveDriverContent.contentproj", "{5C409413-E268-4DBD-84A9-39527D20041B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Windows Phone = Debug|Windows Phone
+		Release|Windows Phone = Release|Windows Phone
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}.Debug|Windows Phone.ActiveCfg = Debug|Windows Phone
+		{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}.Debug|Windows Phone.Build.0 = Debug|Windows Phone
+		{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}.Debug|Windows Phone.Deploy.0 = Debug|Windows Phone
+		{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}.Release|Windows Phone.ActiveCfg = Release|Windows Phone
+		{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}.Release|Windows Phone.Build.0 = Release|Windows Phone
+		{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}.Release|Windows Phone.Deploy.0 = Release|Windows Phone
+		{5C409413-E268-4DBD-84A9-39527D20041B}.Debug|Windows Phone.ActiveCfg = Debug|Windows Phone
+		{5C409413-E268-4DBD-84A9-39527D20041B}.Release|Windows Phone.ActiveCfg = Release|Windows Phone
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
