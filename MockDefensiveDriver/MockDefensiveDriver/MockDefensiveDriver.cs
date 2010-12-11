@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Input.Touch;
 using Microsoft.Xna.Framework.Media;
 using MockDefensiveDriver.Entities;
+using MockDefensiveDriver.Entities.Cars;
 
 namespace MockDefensiveDriver
 {
@@ -25,16 +26,22 @@ namespace MockDefensiveDriver
 
         private ScrollingBackground _background;
         private World _world;
+        private IList<Car> Cars = new List<Car>();
+        private Car _pc;
+        private Vector2 firstTouchPoint;
 
-        #endregion 
+        #endregion
 
         #region GameSprites
 
+        private const int MaxSpawnAttempts = 5;
         private Texture2D _backGroundTexture;
         private Texture2D _whitecarTexture;
         private Texture2D _redcarTexture;
+        private Texture2D _bluecarTexture;
+        bool isPcTouched = false;
 
-        #endregion 
+        #endregion
 
         public MockDefensiveDriver()
         {
@@ -43,11 +50,10 @@ namespace MockDefensiveDriver
                                 SupportedOrientations = DisplayOrientation.Portrait,
                                 PreferredBackBufferHeight = 800,
                                 PreferredBackBufferWidth = 480
-                           };
+                            };
             Content.RootDirectory = "Content";
-            _background = new ScrollingBackground();
 
-            _world = new World();
+            _background = new ScrollingBackground();
 
             // Frame rate is 30 fps by default for Windows Phone.
             TargetElapsedTime = TimeSpan.FromTicks(333333);
@@ -77,8 +83,92 @@ namespace MockDefensiveDriver
             _backGroundTexture = Content.Load<Texture2D>("Content\\Images\\road");
             _whitecarTexture = Content.Load<Texture2D>("Content\\Images\\whitecar");
             _redcarTexture = Content.Load<Texture2D>("Content\\Images\\redcar");
-            _world.LoadContent(GraphicsDevice, new Texture2D[]{_whitecarTexture, _redcarTexture});
+            _bluecarTexture = Content.Load<Texture2D>("Content\\Images\\bluecar");
             _background.LoadContent(GraphicsDevice, _backGroundTexture);
+
+            _world = new World(new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height));
+            
+            _pc = new Car(_redcarTexture);
+            InitializePcCar(_pc);
+            LoadNpcCars(17, new Texture2D[] { _whitecarTexture, _bluecarTexture });
+
+            TouchPanel.EnabledGestures = GestureType.FreeDrag;
+        }
+
+        private void LoadNpcCars(int quantity, Texture2D[] textures)
+        {
+            Cars.Clear(); //Delete any existing cars in operation
+            var rand = new Random();
+            var laneNum = 0;
+
+            for(var i = 0; i < quantity; i++)
+            {
+                var spawnAttempts = 0;
+                var textureId = rand.Next(0, textures.Count()-1);
+                
+                var newCar = new Car(textures[textureId]);
+                InitialzeNpcCar(newCar, laneNum, ref rand);
+                OptimizeSpawnPosition(newCar, laneNum, ref rand, ref spawnAttempts);
+                if(spawnAttempts != MaxSpawnAttempts)
+                {
+                    Cars.Add(newCar);
+                    laneNum++;
+                    if (laneNum >= _world.Lanes.Count())
+                        laneNum = 0;
+                }
+                
+            }
+        }
+
+        private void InitializePcCar(Car car)
+        {
+            var laneNum = _world.Lanes.Count()/2;
+            car.Center = new Vector2((_world.Lanes[laneNum].LaneBox.X + (_world.Lanes[laneNum].LaneBox.Width - car.Width)/2f), _world.Bounds.Height - car.Height);
+            car.Velocity = new Vector2(0f, -10f);
+        }
+
+        private void InitialzeNpcCar(Car car, int laneNum, ref Random rand)
+        {
+            var yPos = rand.Next(0, _world.Bounds.Height - car.Height);
+            var velocity = (-1)*(rand.Next(5, 25) + 0.5f);
+            car.Center = new Vector2((_world.Lanes[laneNum].LaneBox.X + (_world.Lanes[laneNum].LaneBox.Width - car.Width)/2f), yPos);
+            car.Velocity = new Vector2(0f, velocity);
+        }
+
+        /// <summary>
+        /// Recursively looks for an optimal place to spawn an NPC car where it won't collide with any other NPCs
+        /// </summary>
+        /// <param name="car">The car we intend to spawn</param>
+        /// <param name="laneNum">the lane on the freeway the car belongs to</param>
+        /// <param name="rand">a random number generator we pass by reference</param>
+        /// <param name="attemptCount">the number of attempts it has taken us to spawn this car</param>
+        private void OptimizeSpawnPosition(Car car, int laneNum, ref Random rand, ref int attemptCount)
+        {
+            Car collisionCar;
+            if (!CheckNpcCollision(car.CollisionBoundary, out collisionCar) || attemptCount == MaxSpawnAttempts) return;
+
+            attemptCount++;
+            InitialzeNpcCar(car, laneNum, ref rand);
+            OptimizeSpawnPosition(car, laneNum, ref rand, ref attemptCount);
+        }
+
+
+        /// <summary>
+        /// Checks a given area against all NPCs in order to find a collision - event terminates on the first collision in case there's more than one.
+        /// </summary>
+        /// <param name="toCheck">the area to check for a collision</param>
+        /// <param name="collided">a reference to the car that collided with the given rectangle</param>
+        /// <returns>true or false</returns>
+        private bool CheckNpcCollision(Rectangle toCheck, out Car collided)
+        {
+            foreach (var car in Cars.Where(car => car.CollisionBoundary.Intersects(toCheck)))
+            {
+                collided = car;
+                return true;
+            }
+
+            collided = null;
+            return false;
         }
 
         /// <summary>
@@ -105,10 +195,51 @@ namespace MockDefensiveDriver
             var elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             _background.Update(elapsed * 50);
-            _world.Update();
-
+            foreach(var car in Cars)
+            {
+                car.Update(gameTime, ref _world.Bounds);
+            }
+            _pc.Update(gameTime, ref _world.Bounds);
+            HandleTouchInput();
             base.Update(gameTime);
         }
+
+        public void HandleTouchInput()
+        {
+            var touches = TouchPanel.GetState();
+
+
+            foreach (var touch in touches)
+            {
+                switch (touch.State)
+                {
+                    case TouchLocationState.Pressed:
+                        if (_pc.CollisionBoundary.Contains(new Point((int)touch.Position.X, (int)touch.Position.Y)))
+                        {
+                            isPcTouched = true;
+                            firstTouchPoint = touch.Position;
+                        }
+                        else
+                        {
+                            isPcTouched = false;
+                        }
+
+                        break;
+                    case TouchLocationState.Moved:
+                        if (isPcTouched)
+                        {
+                            _pc.Velocity += touch.Position - firstTouchPoint;
+                            firstTouchPoint = touch.Position;
+                        }
+
+                        break;
+                    case TouchLocationState.Released:
+                        break;
+                }
+            }
+
+        }
+
 
         /// <summary>
         /// This is called when the game should draw itself.
@@ -120,7 +251,11 @@ namespace MockDefensiveDriver
 
             _spriteBatch.Begin();
             _background.Draw(_spriteBatch);
-            _world.Draw(_spriteBatch);
+            foreach(var car in Cars)
+            {
+                car.Draw(_spriteBatch);
+            }
+            _pc.Draw(_spriteBatch);
             _spriteBatch.End();
 
             base.Draw(gameTime);

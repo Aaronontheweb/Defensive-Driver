@@ -9,49 +9,89 @@ namespace MockDefensiveDriver.Entities.Cars
     {
         public bool Collided { get; set; }
         public bool IsColliding { get; set; }
-        public Rectangle CarBoundary { get; private set; }
-        public Lane CurrentLane { get; set; }
+        public Rectangle CollisionBoundary
+        {
+            get
+            {
+                var boundingBox =  new Rectangle(
+                    (int)(Center.X - _texture.Width / 2 * Scale),
+                    (int)(Center.Y - _texture.Height / 2 * Scale),
+                    (int)(_texture.Width * Scale),
+                    (int)(_texture.Height * Scale));
+
+                //Make it easier to touch the car
+                boundingBox.Inflate(BoxPadding, BoxPadding);
+                return boundingBox;
+            }
+        }
+
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+
+        public Vector2 Center;
+        public Vector2 Velocity;
+
+        public float Scale { get { return scale; } set { scale = MathHelper.Clamp(value, MinScale, MaxScale); } }
+
+        // the minimum and maximum scale values for the sprite
+        public const int BoxPadding = 15;
+        public const float MinScale = .5f;
+        public const float MaxScale = 2f;
+
+        // this is the percentage of velocity lost each second as
+        // the sprite moves around.
+        public const float Friction = .9f;
 
         #region private members
 
-        protected Vector2 _origin, _position;
+        protected float scale = 1f;
         protected Texture2D _texture;
-        protected float _yPos;
-        protected float _velocity;
-        protected int _duration = 0; //duration in seconds for bounce movements
 
         #endregion
 
-        public Car(Lane lane)
+        public Car(Texture2D texture)
         {
             Collided = false;
             IsColliding = false;
-            CurrentLane = lane;
-            var rand = new Random();
-            _velocity = (float) (rand.NextDouble() * 3d);
-        }
-
-        public void LoadContent(float yPos, Texture2D texture)
-        {
-            _origin = new Vector2(CurrentLane.LaneBox.X + (CurrentLane.LaneBox.Width / 2), yPos);
-            _position = new Vector2(_origin.X, _origin.Y);
             _texture = texture;
-            CarBoundary = new Rectangle((int)_origin.X , (int)_origin.Y, texture.Width, texture.Height);
-            
+            Width = _texture.Width;
+            Height = _texture.Height;
         }
 
-        public void Update()
+        public virtual void Update(GameTime time, ref Rectangle bounds)
         {
-            _position.Y += _velocity;
-            //Bounding functions
-            if (_position.Y < ((-1) * _texture.Height)) _position.Y = CurrentLane.LaneBox.Height;
-            if(_position.Y > (CurrentLane.LaneBox.Height + _texture.Height)) _position.Y = (-1) * _texture.Height;
+            Center += Velocity * (float)time.ElapsedGameTime.TotalSeconds;
 
+            Velocity *= 1f - (Friction*(float) time.ElapsedGameTime.TotalSeconds);
+
+            // calculate the scaled width and height for the method
+            var halfWidth = (Width * Scale) / 2f;
+            var halfHeight = (Height * Scale) / 2f;
+
+            if(Center.X < bounds.Left + halfWidth)
+            {
+                Center.X = bounds.Left + halfWidth;
+            }
+
+            if(Center.X > bounds.Right - halfWidth)
+            {
+                Center.X = bounds.Right - halfWidth;
+            }
+
+            if(Center.Y < bounds.Top - halfHeight)
+            {
+                Center.Y = bounds.Bottom + halfHeight;
+            }
+
+            if(Center.Y > bounds.Bottom + halfHeight)
+            {
+                Center.Y = bounds.Top - halfHeight;
+            }
         }
 
         public void Draw(SpriteBatch batch)
         {
-            batch.Draw(_texture, _position, null, Color.White);
+            batch.Draw(_texture, Center, null, Color.White, 0, new Vector2(Width / 2, Height /2), Scale, SpriteEffects.None, 0);
         }
 
     }
