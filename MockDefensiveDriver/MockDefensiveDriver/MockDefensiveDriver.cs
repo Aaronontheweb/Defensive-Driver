@@ -27,19 +27,28 @@ namespace MockDefensiveDriver
         private ScrollingBackground _background;
         private World _world;
         private IList<Car> Cars = new List<Car>();
-        private Car _pc;
+        private PcCar _pc;
         private Vector2 firstTouchPoint;
 
         #endregion
 
-        #region GameSprites
+        #region Game Content
 
         private const int MaxSpawnAttempts = 5;
         private Texture2D _backGroundTexture;
         private Texture2D _whitecarTexture;
         private Texture2D _redcarTexture;
         private Texture2D _bluecarTexture;
-        bool isPcTouched = false;
+        public static IList<Texture2D> _explosions;
+        private SoundEffect _explosionSoundEffect;
+        
+
+        #endregion
+
+        #region Game Flags
+
+        private bool isPcTouched = false;
+        private bool isGameOver = false;
 
         #endregion
 
@@ -84,11 +93,19 @@ namespace MockDefensiveDriver
             _whitecarTexture = Content.Load<Texture2D>("Content\\Images\\whitecar");
             _redcarTexture = Content.Load<Texture2D>("Content\\Images\\redcar");
             _bluecarTexture = Content.Load<Texture2D>("Content\\Images\\bluecar");
+            _explosions = new List<Texture2D>
+                              {
+                                  Content.Load<Texture2D>("Content\\Images\\explosion_1"),
+                                  Content.Load<Texture2D>("Content\\Images\\explosion_2"),
+                                  Content.Load<Texture2D>("Content\\Images\\explosion_3"),
+                                  Content.Load<Texture2D>("Content\\Images\\explosion_4")
+                              };
+            _explosionSoundEffect = Content.Load<SoundEffect>("Content\\Audio\\Explosion");
             _background.LoadContent(GraphicsDevice, _backGroundTexture);
 
             _world = new World(new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height));
             
-            _pc = new Car(_redcarTexture);
+            _pc = new PcCar(_redcarTexture);
             InitializePcCar(_pc);
             LoadNpcCars(17, new Texture2D[] { _whitecarTexture, _bluecarTexture });
 
@@ -107,7 +124,7 @@ namespace MockDefensiveDriver
                 var textureId = rand.Next(0, textures.Count()-1);
                 
                 var newCar = new Car(textures[textureId]);
-                InitialzeNpcCar(newCar, laneNum, ref rand);
+                InitializeNpcCar(newCar, laneNum, ref rand);
                 OptimizeSpawnPosition(newCar, laneNum, ref rand, ref spawnAttempts);
                 if(spawnAttempts != MaxSpawnAttempts)
                 {
@@ -127,7 +144,7 @@ namespace MockDefensiveDriver
             car.Velocity = new Vector2(0f, -10f);
         }
 
-        private void InitialzeNpcCar(Car car, int laneNum, ref Random rand)
+        private void InitializeNpcCar(Car car, int laneNum, ref Random rand)
         {
             var yPos = rand.Next(0, _world.Bounds.Height - car.Height);
             var velocity = (-1)*(rand.Next(5, 25) + 0.5f);
@@ -148,7 +165,7 @@ namespace MockDefensiveDriver
             if (!CheckNpcCollision(car.CollisionBoundary, out collisionCar) || attemptCount == MaxSpawnAttempts) return;
 
             attemptCount++;
-            InitialzeNpcCar(car, laneNum, ref rand);
+            InitializeNpcCar(car, laneNum, ref rand);
             OptimizeSpawnPosition(car, laneNum, ref rand, ref attemptCount);
         }
 
@@ -161,7 +178,7 @@ namespace MockDefensiveDriver
         /// <returns>true or false</returns>
         private bool CheckNpcCollision(Rectangle toCheck, out Car collided)
         {
-            foreach (var car in Cars.Where(car => car.CollisionBoundary.Intersects(toCheck)))
+            foreach (var car in Cars.Where(car => car.CollisionBoundary.Intersects(toCheck) && car.IsColliding == false))
             {
                 collided = car;
                 return true;
@@ -194,27 +211,46 @@ namespace MockDefensiveDriver
             // The time since Update was called last.
             var elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            _background.Update(elapsed * 50);
-            foreach(var car in Cars)
+            if(!isGameOver)
             {
-                car.Update(gameTime, ref _world.Bounds);
+                _background.Update(elapsed * 50);
+                HandleTouchInput();
+
+                foreach (var car in Cars)
+                {
+                    car.Update(gameTime, ref _world.Bounds);
+                }
+                _pc.Update(gameTime, ref _world.Bounds);
+
+                //Check for player collision with NPCs
+                Car collidedCar;
+                if (CheckNpcCollision(_pc.CollisionBoundary, out collidedCar))
+                {
+                    _explosionSoundEffect.Play(1.0f, 0.0f, 0.0f);
+                    isGameOver = true;
+                    collidedCar.Explode();
+                    _pc.Explode();
+                }
             }
-            _pc.Update(gameTime, ref _world.Bounds);
-            HandleTouchInput();
+
+            
+            
             base.Update(gameTime);
         }
 
+        /// <summary>
+        /// Processes the physics behind user touch input
+        /// </summary>
         public void HandleTouchInput()
         {
             var touches = TouchPanel.GetState();
-
 
             foreach (var touch in touches)
             {
                 switch (touch.State)
                 {
                     case TouchLocationState.Pressed:
-                        if (_pc.CollisionBoundary.Contains(new Point((int)touch.Position.X, (int)touch.Position.Y)))
+                        if (_pc.TouchArea.Contains(new Point((int) touch.Position.X, (int) touch.Position.Y)))
                         {
                             isPcTouched = true;
                             firstTouchPoint = touch.Position;
@@ -237,7 +273,6 @@ namespace MockDefensiveDriver
                         break;
                 }
             }
-
         }
 
 

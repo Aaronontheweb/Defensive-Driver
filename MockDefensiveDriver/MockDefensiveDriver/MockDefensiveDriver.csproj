@@ -86,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\Cars\Car.cs" />
+    <Compile Include="Entities\Cars\PcCar.cs" />
     <Compile Include="Entities\Lane.cs" />
     <Compile Include="Entities\World.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
