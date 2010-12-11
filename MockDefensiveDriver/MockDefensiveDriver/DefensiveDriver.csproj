@@ -88,6 +88,7 @@
     <Compile Include="Entities\Cars\Car.cs" />
     <Compile Include="Entities\Cars\PcCar.cs" />
     <Compile Include="Entities\Lane.cs" />
+    <Compile Include="Entities\ScoreBoard.cs" />
     <Compile Include="Entities\World.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScrollingBackground.cs" />
@@ -98,7 +99,7 @@
       <XnaPlatformSpecific>true</XnaPlatformSpecific>
     </None>
     <Compile Include="Program.cs" />
-    <Compile Include="MockDefensiveDriver.cs" />
+    <Compile Include="DefensiveDriver.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Game.ico" />
@@ -108,9 +109,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MockDefensiveDriverContent\MockDefensiveDriverContent.contentproj">
-      <Name>MockDefensiveDriverContent</Name>
+    <ProjectReference Include="..\MockDefensiveDriverContent\DefensiveDriverContent.contentproj">
+      <Name>DefensiveDriverContent %28Content%29</Name>
       <XnaReferenceType>Content</XnaReferenceType>
+      <Project>{5C409413-E268-4DBD-84A9-39527D20041B}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

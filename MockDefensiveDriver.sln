@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockDefensiveDriver", "MockDefensiveDriver\MockDefensiveDriver\MockDefensiveDriver.csproj", "{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DefensiveDriver", "MockDefensiveDriver\MockDefensiveDriver\DefensiveDriver.csproj", "{E1FE8033-CB59-4ECD-8C76-677A71AD22C1}"
 EndProject
-Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "MockDefensiveDriverContent", "MockDefensiveDriver\MockDefensiveDriverContent\MockDefensiveDriverContent.contentproj", "{5C409413-E268-4DBD-84A9-39527D20041B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DefensiveDriverContent", "MockDefensiveDriver\MockDefensiveDriverContent\DefensiveDriverContent.contentproj", "{5C409413-E268-4DBD-84A9-39527D20041B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

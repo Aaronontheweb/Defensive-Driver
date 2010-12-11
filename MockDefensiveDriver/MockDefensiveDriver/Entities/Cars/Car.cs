@@ -51,6 +51,7 @@ namespace MockDefensiveDriver.Entities.Cars
         public const int BoxPadding = 15;
         public const float MinScale = .5f;
         public const float MaxScale = 2f;
+        public static readonly TimeSpan ExplosionDelay = new TimeSpan(0,0,0,0,150);
 
         // this is the percentage of velocity lost each second as
         // the sprite moves around.
@@ -61,6 +62,8 @@ namespace MockDefensiveDriver.Entities.Cars
         protected float scale = 1f;
         protected Texture2D _texture;
         protected int _explosion_sequence = 0;
+        protected DateTime _last_explosion;
+        protected Random _rand;
 
         #endregion
 
@@ -70,12 +73,14 @@ namespace MockDefensiveDriver.Entities.Cars
             _texture = texture;
             Width = _texture.Width;
             Height = _texture.Height;
+            _rand = new Random();
         }
 
         public void Explode()
         {
             IsColliding = true;
             Velocity = Vector2.Zero;
+            _explosion_sequence = _rand.Next(0, DefensiveDriver.Explosions.Count-1);
         }
 
         public virtual void Update(GameTime time, ref Rectangle bounds)
@@ -121,12 +126,17 @@ namespace MockDefensiveDriver.Entities.Cars
             batch.Draw(_texture, Center, null, Color.White, 0, new Vector2(Width / 2, Height /2), Scale, SpriteEffects.None, 0);
             if(IsColliding)
             {
-                var explosionTexture = MockDefensiveDriver._explosions[_explosion_sequence];
+                var explosionTexture = DefensiveDriver.Explosions[_explosion_sequence];
                 batch.Draw(explosionTexture, Center, null, Color.White, 0, new Vector2(Width / 2, Height / 2), Scale, SpriteEffects.None, 0);
-                if(_explosion_sequence + 1 == MockDefensiveDriver._explosions.Count)
-                    _explosion_sequence = 0;
-                else
-                    _explosion_sequence++;
+                if(_last_explosion == DateTime.MinValue || (DateTime.Now -_last_explosion >= ExplosionDelay))
+                {
+                    _last_explosion = DateTime.Now;
+                    if (_explosion_sequence + 1 == DefensiveDriver.Explosions.Count)
+                        _explosion_sequence = 0;
+                    else
+                        _explosion_sequence++;
+                }
+                
             }
 
         }

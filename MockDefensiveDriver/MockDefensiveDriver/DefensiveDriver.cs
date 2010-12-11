@@ -17,7 +17,7 @@ namespace MockDefensiveDriver
     /// <summary>
     /// This is the main type for your game
     /// </summary>
-    public class MockDefensiveDriver : Microsoft.Xna.Framework.Game
+    public class DefensiveDriver : Microsoft.Xna.Framework.Game
     {
         GraphicsDeviceManager _graphics;
         SpriteBatch _spriteBatch;
@@ -29,6 +29,7 @@ namespace MockDefensiveDriver
         private IList<Car> Cars = new List<Car>();
         private PcCar _pc;
         private Vector2 firstTouchPoint;
+        private ScoreBoard _scoreBoard;
 
         #endregion
 
@@ -39,9 +40,9 @@ namespace MockDefensiveDriver
         private Texture2D _whitecarTexture;
         private Texture2D _redcarTexture;
         private Texture2D _bluecarTexture;
-        public static IList<Texture2D> _explosions;
+        public static IList<Texture2D> Explosions;
         private SoundEffect _explosionSoundEffect;
-        
+        private SpriteFont _font;
 
         #endregion
 
@@ -52,7 +53,7 @@ namespace MockDefensiveDriver
 
         #endregion
 
-        public MockDefensiveDriver()
+        public DefensiveDriver()
         {
             _graphics = new GraphicsDeviceManager(this)
                             {
@@ -93,7 +94,7 @@ namespace MockDefensiveDriver
             _whitecarTexture = Content.Load<Texture2D>("Content\\Images\\whitecar");
             _redcarTexture = Content.Load<Texture2D>("Content\\Images\\redcar");
             _bluecarTexture = Content.Load<Texture2D>("Content\\Images\\bluecar");
-            _explosions = new List<Texture2D>
+            Explosions = new List<Texture2D>
                               {
                                   Content.Load<Texture2D>("Content\\Images\\explosion_1"),
                                   Content.Load<Texture2D>("Content\\Images\\explosion_2"),
@@ -101,9 +102,10 @@ namespace MockDefensiveDriver
                                   Content.Load<Texture2D>("Content\\Images\\explosion_4")
                               };
             _explosionSoundEffect = Content.Load<SoundEffect>("Content\\Audio\\Explosion");
+            _font = Content.Load<SpriteFont>("Content\\Fonts\\GameText");
             _background.LoadContent(GraphicsDevice, _backGroundTexture);
-
             _world = new World(new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height));
+            _scoreBoard = new ScoreBoard("Your Score: ", ref _world.Bounds, _font);
             
             _pc = new PcCar(_redcarTexture);
             InitializePcCar(_pc);
@@ -221,6 +223,7 @@ namespace MockDefensiveDriver
                     car.Update(gameTime, ref _world.Bounds);
                 }
                 _pc.Update(gameTime, ref _world.Bounds);
+                _scoreBoard.Update(gameTime);
 
                 //Check for player collision with NPCs
                 Car collidedCar;
@@ -291,6 +294,7 @@ namespace MockDefensiveDriver
                 car.Draw(_spriteBatch);
             }
             _pc.Draw(_spriteBatch);
+            _scoreBoard.Draw(_spriteBatch);
             _spriteBatch.End();
 
             base.Draw(gameTime);
