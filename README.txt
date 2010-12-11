@@ -5,4 +5,5 @@ Credit to MSDN for providing us with a code sample of a Scrolling Background Tex
 Aside from that bit of code, all rights reserved Aaron Stannard and Drew Baumann 2010.
 
 http://www.stannardlabs.com/
-http://www.aaronstannard.cm/
+http://www.aaronstannard.com/
+http://www.drewbaumann.com/
