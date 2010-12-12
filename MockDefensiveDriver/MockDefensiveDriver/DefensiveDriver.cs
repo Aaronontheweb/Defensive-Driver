@@ -165,6 +165,7 @@ namespace MockDefensiveDriver
         {
             Car collisionCar;
             if (!CheckNpcCollision(car.CollisionBoundary, out collisionCar) || attemptCount == MaxSpawnAttempts) return;
+            if (_pc.CollisionBoundary.Intersects(car.CollisionBoundary)) return;
 
             attemptCount++;
             InitializeNpcCar(car, laneNum, ref rand);
