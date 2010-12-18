@@ -7,8 +7,15 @@ namespace MockDefensiveDriver.Entities.Cars
 
     public class Car
     {
+
+        //Contants used by the AI to determine whether or not there is a collision that it needs to avoid
+        protected const int CollisionDetectionDistanceX = 25;
+        protected const int CollisionDetectionDistanceY = 35;
+
         public bool IsColliding { get; set; }
-        public Rectangle CollisionBoundary
+        public bool NeedsRespawn { get; set; }
+
+        public Rectangle HardCollisionBoundary
         {
             get
             {
@@ -19,6 +26,23 @@ namespace MockDefensiveDriver.Entities.Cars
                     (int)(_texture.Height * Scale));
 
                 //Make it easier to touch the car
+                return boundingBox;
+            }
+        }
+
+        public virtual Rectangle SoftCollisionBoundary
+        {
+            get
+            {
+                var boundingBox = new Rectangle(
+                    (int)(Center.X - _texture.Width / 2 * Scale),
+                    (int)(Center.Y - _texture.Height / 2 * Scale),
+                    (int)(_texture.Width * Scale),
+                    (int)(_texture.Height * Scale));
+
+                boundingBox.Inflate(CollisionDetectionDistanceX, CollisionDetectionDistanceY);
+
+                //Make it easier to touch the car);
                 return boundingBox;
             }
         }
@@ -51,7 +75,12 @@ namespace MockDefensiveDriver.Entities.Cars
         public const int BoxPadding = 65;
         public const float MinScale = .5f;
         public const float MaxScale = 2f;
+
+        //Controls the iterations between explosion animation effects
         public static readonly TimeSpan ExplosionDelay = new TimeSpan(0,0,0,0,150);
+
+        //Controls how long the explosion lasts before the NPC respawns.
+        public static readonly TimeSpan ExplosionDuration = new TimeSpan(0,0,0,750);
 
         // this is the percentage of velocity lost each second as
         // the sprite moves around.
@@ -63,6 +92,7 @@ namespace MockDefensiveDriver.Entities.Cars
         protected Texture2D _texture;
         protected int _explosion_sequence = 0;
         protected DateTime _last_explosion;
+        protected DateTime _explosion_start;
         protected Random _rand;
 
         #endregion
@@ -79,16 +109,28 @@ namespace MockDefensiveDriver.Entities.Cars
         public void Explode()
         {
             IsColliding = true;
-            Velocity = Vector2.Zero;
-            _explosion_sequence = _rand.Next(0, DefensiveDriver.Explosions.Count-1);
+            _explosion_start = DateTime.Now;
+            _explosion_sequence = _rand.Next(0, World.Explosions.Count-1);
         }
 
         public virtual void Update(GameTime time, ref Rectangle bounds)
         {
-            Center += Velocity * (float)time.ElapsedGameTime.TotalSeconds;
+            if(!IsColliding)
+            {
+                Center += Velocity * (float)time.ElapsedGameTime.TotalSeconds;
 
-            // calculate the scaled width and height for the method
-            ManageBounds(bounds);
+                // calculate the scaled width and height for the method
+                ManageBounds(bounds); 
+            }
+            else
+            {
+                if(DateTime.Now - _explosion_start >= ExplosionDuration) //If the explosion has met its duration, respawn.
+                {
+                    IsColliding = false;
+                    NeedsRespawn = true;
+                }
+            }
+            
         }
 
         virtual protected void ManageBounds(Rectangle bounds)
@@ -124,12 +166,12 @@ namespace MockDefensiveDriver.Entities.Cars
             batch.Draw(_texture, Center, null, Color.White, 0, new Vector2(Width / 2, Height /2), Scale, SpriteEffects.None, 0);
             if(IsColliding)
             {
-                var explosionTexture = DefensiveDriver.Explosions[_explosion_sequence];
+                var explosionTexture = World.Explosions[_explosion_sequence];
                 batch.Draw(explosionTexture, Center, null, Color.White, 0, new Vector2(Width / 2, Height / 2), Scale, SpriteEffects.None, 0);
                 if(_last_explosion == DateTime.MinValue || (DateTime.Now -_last_explosion >= ExplosionDelay))
                 {
                     _last_explosion = DateTime.Now;
-                    if (_explosion_sequence + 1 == DefensiveDriver.Explosions.Count)
+                    if (_explosion_sequence + 1 == World.Explosions.Count)
                         _explosion_sequence = 0;
                     else
                         _explosion_sequence++;

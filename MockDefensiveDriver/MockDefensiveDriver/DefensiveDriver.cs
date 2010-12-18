@@ -35,13 +35,10 @@ namespace MockDefensiveDriver
 
         #region Game Content
 
-        private const int MaxSpawnAttempts = 5;
-        private const int MinimumSafeSpawnDistance = 25;
         private Texture2D _backGroundTexture;
         private Texture2D _whitecarTexture;
         private Texture2D _redcarTexture;
         private Texture2D _bluecarTexture;
-        public static IList<Texture2D> Explosions;
         private SoundEffect _explosionSoundEffect;
         private SpriteFont _font;
 
@@ -95,7 +92,7 @@ namespace MockDefensiveDriver
             _whitecarTexture = Content.Load<Texture2D>("Content\\Images\\whitecar");
             _redcarTexture = Content.Load<Texture2D>("Content\\Images\\redcar");
             _bluecarTexture = Content.Load<Texture2D>("Content\\Images\\bluecar");
-            Explosions = new List<Texture2D>
+            World.Explosions = new List<Texture2D>
                               {
                                   Content.Load<Texture2D>("Content\\Images\\explosion_1"),
                                   Content.Load<Texture2D>("Content\\Images\\explosion_2"),
@@ -109,109 +106,10 @@ namespace MockDefensiveDriver
             _scoreBoard = new ScoreBoard("Your Score: ", ref _world.Bounds, _font);
             
             _pc = new PcCar(_redcarTexture);
-            InitializePcCar(_pc);
-            LoadNpcCars(17, new Texture2D[] { _whitecarTexture, _bluecarTexture });
+            _world.InitializePcCar(_pc);
+            _pc.LoadNpcCars(_world, Cars, 17, new Texture2D[] { _whitecarTexture, _bluecarTexture });
 
             TouchPanel.EnabledGestures = GestureType.FreeDrag;
-        }
-
-        private void LoadNpcCars(int quantity, Texture2D[] textures)
-        {
-            Cars.Clear(); //Delete any existing cars in operation
-            var rand = new Random();
-            var laneNum = 0;
-
-            for(var i = 0; i < quantity; i++)
-            {
-                var spawnAttempts = 0;
-                var textureId = rand.Next(0, textures.Count()-1);
-                
-                var newCar = new Car(textures[textureId]);
-                InitializeNpcCar(newCar, laneNum, ref rand);
-                OptimizeSpawnPosition(newCar, laneNum, ref rand, ref spawnAttempts);
-
-                //If the car did not hit its number of maximum spawn attempts, assume it safe-spawned and spawn it
-                if(spawnAttempts <= MaxSpawnAttempts)
-                {
-                    Cars.Add(newCar);
-                    laneNum++;
-                    if (laneNum >= _world.Lanes.Count())
-                        laneNum = 0;
-                }
-                
-            }
-        }
-
-        private void InitializePcCar(Car car)
-        {
-            var laneNum = _world.Lanes.Count()/2;
-            car.Center = new Vector2((_world.Lanes[laneNum].LaneBox.X + (_world.Lanes[laneNum].LaneBox.Width - car.Width)/2f), _world.Bounds.Height - car.Height);
-            car.Velocity = new Vector2(0f, -10f);
-        }
-
-        private void InitializeNpcCar(Car car, int laneNum, ref Random rand)
-        {
-            var yPos = rand.Next(0, _world.Bounds.Height - car.Height);
-            var velocity = (rand.Next(-45, 45) + 0.5f);
-            car.Center = new Vector2((_world.Lanes[laneNum].LaneBox.X + (_world.Lanes[laneNum].LaneBox.Width - car.Width)/2f), yPos);
-            car.Velocity = new Vector2(0f, velocity);
-        }
-
-        /// <summary>
-        /// Recursively looks for an optimal place to spawn an NPC car where it won't collide with any other NPCs
-        /// </summary>
-        /// <param name="car">The car we intend to spawn</param>
-        /// <param name="laneNum">the lane on the freeway the car belongs to</param>
-        /// <param name="rand">a random number generator we pass by reference</param>
-        /// <param name="attemptCount">the number of attempts it has taken us to spawn this car</param>
-        private void OptimizeSpawnPosition(Car car, int laneNum, ref Random rand, ref int attemptCount)
-        {
-            Car collisionCar;
-
-            //Create a spawning cusion for each NPC character so nothing spawns on top of the other
-            var npcCollisionBoundary = car.CollisionBoundary;
-            npcCollisionBoundary.Inflate(MinimumSafeSpawnDistance, MinimumSafeSpawnDistance);
-
-
-            //Give the PC a much larger spawning cushion to begin the game
-            var pcCollisionBoundary = car.CollisionBoundary;
-            pcCollisionBoundary.Inflate(MinimumSafeSpawnDistance*3, MinimumSafeSpawnDistance*3);
-
-            if (
-                (CheckNpcCollision(npcCollisionBoundary, out collisionCar) ||
-                _pc.CollisionBoundary.Intersects(pcCollisionBoundary))
-                && attemptCount <= MaxSpawnAttempts
-                )
-            {
-
-                /* All of this code needs to execute whenever an NPC car has:
-                 *  1. Spawned on top of another NPC
-                 *  2. Spawned on top of the PC
-                 *  3. And the maxmimum number of spawn attempts has not been reached.
-                */
-
-                attemptCount++;
-                InitializeNpcCar(car, laneNum, ref rand);
-                OptimizeSpawnPosition(car, laneNum, ref rand, ref attemptCount);
-            }
-        }
-
-        /// <summary>
-        /// Checks a given area against all NPCs in order to find a collision - event terminates on the first collision in case there's more than one.
-        /// </summary>
-        /// <param name="toCheck">the area to check for a collision</param>
-        /// <param name="collided">a reference to the car that collided with the given rectangle</param>
-        /// <returns>true or false</returns>
-        private bool CheckNpcCollision(Rectangle toCheck, out Car collided)
-        {
-            foreach (var car in Cars.Where(car => car.CollisionBoundary.Intersects(toCheck) && car.IsColliding == false))
-            {
-                collided = car;
-                return true;
-            }
-
-            collided = null;
-            return false;
         }
 
         /// <summary>
@@ -249,9 +147,17 @@ namespace MockDefensiveDriver
                 _pc.Update(gameTime, ref _world.Bounds);
                 _scoreBoard.Update(gameTime);
 
+                //Check for NPC collisions against each other
+                var collidedCars = _world.CheckNpcCollisions(new List<Car>(Cars));
+                foreach(var car in collidedCars)
+                {
+                    _explosionSoundEffect.Play(1.0f, 0.0f, 0.0f);
+                    car.Explode();
+                }
+
                 //Check for player collision with NPCs
                 Car collidedCar;
-                if (CheckNpcCollision(_pc.CollisionBoundary, out collidedCar))
+                if (_world.CheckNpcHardCollision(Cars, _pc.HardCollisionBoundary, out collidedCar))
                 {
                     _explosionSoundEffect.Play(1.0f, 0.0f, 0.0f);
                     _isGameOver = true;

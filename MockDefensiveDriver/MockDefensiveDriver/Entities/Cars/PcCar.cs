@@ -13,6 +13,23 @@ namespace MockDefensiveDriver.Entities.Cars
         {
         }
 
+        public override Rectangle SoftCollisionBoundary
+        {
+            get
+            {
+                var boundingBox = new Rectangle(
+                    (int)(Center.X - _texture.Width / 2 * Scale),
+                    (int)(Center.Y - _texture.Height / 2 * Scale),
+                    (int)(_texture.Width * Scale),
+                    (int)(_texture.Height * Scale));
+
+                boundingBox.Inflate(CollisionDetectionDistanceX*3, CollisionDetectionDistanceY*3);
+
+                //Make it easier to touch the car);
+                return boundingBox;
+            }
+        }
+
         public override void Update(GameTime time, ref Rectangle bounds)
         {
             Center += Velocity * (float)time.ElapsedGameTime.TotalSeconds;
@@ -46,6 +63,33 @@ namespace MockDefensiveDriver.Entities.Cars
             if (Center.Y > bounds.Bottom - halfHeight)
             {
                 Center.Y = bounds.Bottom - halfHeight;
+            }
+        }
+
+        public void LoadNpcCars(World world, IList<Car> list, int quantity, Texture2D[] textures)
+        {
+            list.Clear(); //Delete any existing cars in operation
+            var rand = new Random();
+            var laneNum = 0;
+
+            for(var i = 0; i < quantity; i++)
+            {
+                var spawnAttempts = 0;
+                var textureId = rand.Next(0, textures.Count()-1);
+                
+                var newCar = new Car(textures[textureId]);
+                world.InitializeNpcCar(newCar, laneNum, ref rand);
+                world.OptimizeSpawnPosition(this, list, newCar, laneNum, ref rand, ref spawnAttempts);
+
+                //If the car did not hit its number of maximum spawn attempts, assume it safe-spawned and spawn it
+                if(spawnAttempts <= World.MaxSpawnAttempts)
+                {
+                    list.Add(newCar);
+                    laneNum++;
+                    if (laneNum >= world.Lanes.Count())
+                        laneNum = 0;
+                }
+                
             }
         }
     }
