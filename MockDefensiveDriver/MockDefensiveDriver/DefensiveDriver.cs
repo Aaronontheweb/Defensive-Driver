@@ -36,6 +36,7 @@ namespace MockDefensiveDriver
         #region Game Content
 
         private const int MaxSpawnAttempts = 5;
+        private const int MinimumSafeSpawnDistance = 25;
         private Texture2D _backGroundTexture;
         private Texture2D _whitecarTexture;
         private Texture2D _redcarTexture;
@@ -128,7 +129,9 @@ namespace MockDefensiveDriver
                 var newCar = new Car(textures[textureId]);
                 InitializeNpcCar(newCar, laneNum, ref rand);
                 OptimizeSpawnPosition(newCar, laneNum, ref rand, ref spawnAttempts);
-                if(spawnAttempts != MaxSpawnAttempts)
+
+                //If the car did not hit its number of maximum spawn attempts, assume it safe-spawned and spawn it
+                if(spawnAttempts <= MaxSpawnAttempts)
                 {
                     Cars.Add(newCar);
                     laneNum++;
@@ -164,14 +167,29 @@ namespace MockDefensiveDriver
         private void OptimizeSpawnPosition(Car car, int laneNum, ref Random rand, ref int attemptCount)
         {
             Car collisionCar;
-            if (!CheckNpcCollision(car.CollisionBoundary, out collisionCar) || attemptCount == MaxSpawnAttempts) return;
-            if (!_pc.CollisionBoundary.Intersects(car.CollisionBoundary)) return;
 
-            attemptCount++;
-            InitializeNpcCar(car, laneNum, ref rand);
-            OptimizeSpawnPosition(car, laneNum, ref rand, ref attemptCount);
+            var collisionBoundary = car.CollisionBoundary;
+            collisionBoundary.Inflate(MinimumSafeSpawnDistance, MinimumSafeSpawnDistance);
+
+            //Note: refactor);
+            if (
+                (CheckNpcCollision(collisionBoundary, out collisionCar) ||
+                _pc.CollisionBoundary.Intersects(collisionBoundary))
+                && attemptCount <= MaxSpawnAttempts
+                )
+            {
+
+                /* All of this code needs to execute whenever an NPC car has:
+                 *  1. Spawned on top of another NPC
+                 *  2. Spawned on top of the PC
+                 *  3. And the maxmimum number of spawn attempts has not been reached.
+                */
+
+                attemptCount++;
+                InitializeNpcCar(car, laneNum, ref rand);
+                OptimizeSpawnPosition(car, laneNum, ref rand, ref attemptCount);
+            }
         }
-
 
         /// <summary>
         /// Checks a given area against all NPCs in order to find a collision - event terminates on the first collision in case there's more than one.
