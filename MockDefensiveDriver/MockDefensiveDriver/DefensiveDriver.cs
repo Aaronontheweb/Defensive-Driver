@@ -49,8 +49,8 @@ namespace MockDefensiveDriver
 
         #region Game Flags
 
-        private bool isPcTouched = false;
-        private bool isGameOver = false;
+        private bool _isPcTouched = false;
+        private bool _isGameOver = false;
 
         #endregion
 
@@ -152,7 +152,7 @@ namespace MockDefensiveDriver
         private void InitializeNpcCar(Car car, int laneNum, ref Random rand)
         {
             var yPos = rand.Next(0, _world.Bounds.Height - car.Height);
-            var velocity = (-1)*(rand.Next(5, 25) + 0.5f);
+            var velocity = (rand.Next(-45, 45) + 0.5f);
             car.Center = new Vector2((_world.Lanes[laneNum].LaneBox.X + (_world.Lanes[laneNum].LaneBox.Width - car.Width)/2f), yPos);
             car.Velocity = new Vector2(0f, velocity);
         }
@@ -168,13 +168,18 @@ namespace MockDefensiveDriver
         {
             Car collisionCar;
 
-            var collisionBoundary = car.CollisionBoundary;
-            collisionBoundary.Inflate(MinimumSafeSpawnDistance, MinimumSafeSpawnDistance);
+            //Create a spawning cusion for each NPC character so nothing spawns on top of the other
+            var npcCollisionBoundary = car.CollisionBoundary;
+            npcCollisionBoundary.Inflate(MinimumSafeSpawnDistance, MinimumSafeSpawnDistance);
 
-            //Note: refactor);
+
+            //Give the PC a much larger spawning cushion to begin the game
+            var pcCollisionBoundary = car.CollisionBoundary;
+            pcCollisionBoundary.Inflate(MinimumSafeSpawnDistance*3, MinimumSafeSpawnDistance*3);
+
             if (
-                (CheckNpcCollision(collisionBoundary, out collisionCar) ||
-                _pc.CollisionBoundary.Intersects(collisionBoundary))
+                (CheckNpcCollision(npcCollisionBoundary, out collisionCar) ||
+                _pc.CollisionBoundary.Intersects(pcCollisionBoundary))
                 && attemptCount <= MaxSpawnAttempts
                 )
             {
@@ -232,7 +237,7 @@ namespace MockDefensiveDriver
             // The time since Update was called last.
             var elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if(!isGameOver)
+            if(!_isGameOver)
             {
                 _background.Update(elapsed * 50);
                 HandleTouchInput();
@@ -249,7 +254,7 @@ namespace MockDefensiveDriver
                 if (CheckNpcCollision(_pc.CollisionBoundary, out collidedCar))
                 {
                     _explosionSoundEffect.Play(1.0f, 0.0f, 0.0f);
-                    isGameOver = true;
+                    _isGameOver = true;
                     collidedCar.Explode();
                     _pc.Explode();
                 }
@@ -274,17 +279,17 @@ namespace MockDefensiveDriver
                     case TouchLocationState.Pressed:
                         if (_pc.TouchArea.Contains(new Point((int) touch.Position.X, (int) touch.Position.Y)))
                         {
-                            isPcTouched = true;
+                            _isPcTouched = true;
                             firstTouchPoint = touch.Position;
                         }
                         else
                         {
-                            isPcTouched = false;
+                            _isPcTouched = false;
                         }
 
                         break;
                     case TouchLocationState.Moved:
-                        if (isPcTouched)
+                        if (_isPcTouched)
                         {
                             _pc.Velocity += touch.Position - firstTouchPoint;
                             firstTouchPoint = touch.Position;

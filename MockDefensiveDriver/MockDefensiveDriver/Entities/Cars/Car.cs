@@ -48,7 +48,7 @@ namespace MockDefensiveDriver.Entities.Cars
         public float Scale { get { return scale; } set { scale = MathHelper.Clamp(value, MinScale, MaxScale); } }
 
         // the minimum and maximum scale values for the sprite
-        public const int BoxPadding = 15;
+        public const int BoxPadding = 65;
         public const float MinScale = .5f;
         public const float MaxScale = 2f;
         public static readonly TimeSpan ExplosionDelay = new TimeSpan(0,0,0,0,150);
@@ -86,8 +86,6 @@ namespace MockDefensiveDriver.Entities.Cars
         public virtual void Update(GameTime time, ref Rectangle bounds)
         {
             Center += Velocity * (float)time.ElapsedGameTime.TotalSeconds;
-
-            Velocity *= 1f - (Friction*(float) time.ElapsedGameTime.TotalSeconds);
 
             // calculate the scaled width and height for the method
             ManageBounds(bounds);
